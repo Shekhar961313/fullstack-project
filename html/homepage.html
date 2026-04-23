@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CloudVault Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="homepage.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="dashboard">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+    <div class="logo">☁ CloudVault</div>
+
+    <ul>
+        <li class="active" onclick="location.href='homepage.html'">Dashboard</li>
+        <li onclick="location.href='#'">My Files</li>
+        <li onclick="location.href='analytics.html'">Analytics</li>
+        <li onclick="logout()">Logout</li>
+    </ul>
+</aside>
+
+    <!-- Main -->
+    <main class="main">
+
+        <header class="topbar">
+            <h1 id="greeting"></h1>
+            <div class="profile">👤</div>
+        </header>
+
+        <!-- Storage Glass Card -->
+        <section class="glass-card storage-card">
+            <div class="storage-header">
+                <h3>Storage Usage</h3>
+                <span id="usedStorage">0 MB</span>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </section>
+
+        <!-- Upload -->
+        <section class="glass-card upload-section">
+            <p>Drag & Drop your files here</p>
+            <input type="file" id="fileInput" multiple hidden>
+            <button onclick="document.getElementById('fileInput').click()">
+                Upload Files
+            </button>
+        </section>
+
+        <!-- Files Grid -->
+        <section class="files-grid" id="fileList"></section>
+
+    </main>
+
+</div>
+
+<script src="homepage.js"></script>
+</body>
+</html>

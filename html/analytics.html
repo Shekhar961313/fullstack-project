@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics</title>
+    <link rel="stylesheet" href="sample.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h2>☁ CloudVault</h2>
+
+        <ul>
+            <li onclick="location.href='homepage.html'">Dashboard</li>
+            <li>My Files</li>
+            <li class="active">Analytics</li>
+            <li onclick="logout()">Logout</li>
+        </ul>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <h1>Analytics</h1>
+
+        <!-- STATS -->
+        <div class="stats">
+            <div class="card"><p>Total Files</p><h2 id="totalFiles">0</h2></div>
+            <div class="card"><p>Images</p><h2 id="imageCount">0</h2></div>
+            <div class="card"><p>PDF</p><h2 id="pdfCount">0</h2></div>
+            <div class="card"><p>Docs</p><h2 id="docCount">0</h2></div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts">
+            <div class="card">
+                <h3>File Types</h3>
+                <canvas id="fileChart"></canvas>
+            </div>
+
+            <div class="card">
+                <h3>Storage</h3>
+                <canvas id="storageChart"></canvas>
+                <p id="storageText"></p>
+            </div>
+        </div>
+
+        <!-- RECENT -->
+        <div class="card">
+            <h3>Recent Files</h3>
+            <ul id="recentFiles"></ul>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="analytics.js"></script>
+</body>
+</html>

@@ -1,0 +1,624 @@
+================================================================================
+          CLOUDSTORE - CLOUD FILE MANAGEMENT SYSTEM
+          COMPLETE PROJECT EXPLANATION (BEGINNER GUIDE)
+================================================================================
+
+TABLE OF CONTENTS:
+1. What is this project?
+2. Tech Stack Explained
+3. Project Structure
+4. How to Run
+5. Backend Explained (Spring Boot)
+6. Frontend Explained (React)
+7. How Frontend & Backend Talk (API Integration)
+8. Session & Authentication Flow
+9. Database Explained
+10. File Upload Flow
+11. Each File Explained
+12. REST API Reference
+
+================================================================================
+1. WHAT IS THIS PROJECT?
+================================================================================
+
+CloudStore is a web application where users can:
+- Register and Login to their account
+- Upload files to the cloud (stored on your computer)
+- View all uploaded files on a Dashboard
+- See files grouped by type (Images, PDFs, Documents, Others)
+- View analytics charts showing file statistics
+- Delete files they no longer need
+
+It has TWO parts:
+- FRONTEND (React) = What the user sees (buttons, pages, forms)
+- BACKEND (Spring Boot) = The server that stores data and handles logic
+
+================================================================================
+2. TECH STACK EXPLAINED
+================================================================================
+
+FRONTEND:
+- React 19        → JavaScript library for building user interfaces
+- Vite             → Tool that runs the React dev server (fast!)
+- React Router v7  → Handles page navigation (Login → Dashboard → Analytics)
+- Axios            → Sends HTTP requests to the backend (like fetch, but easier)
+- Recharts         → Library for drawing charts (pie, bar, line)
+- CSS              → Styling (colors, layouts, fonts)
+
+BACKEND:
+- Spring Boot 3.2  → Java framework for building REST APIs easily
+- Spring Data JPA  → Makes database operations simple (no raw SQL needed)
+- H2 Database      → In-memory database (lives in RAM, no setup needed)
+- Hibernate        → ORM that converts Java objects ↔ database tables
+- Maven            → Build tool that manages Java dependencies (like npm for Java)
+
+================================================================================
+3. PROJECT STRUCTURE
+================================================================================
+
+Cloud-Storage-Management/
+│
+├── backend/                              ← SPRING BOOT (Java Backend)
+│   ├── pom.xml                           ← Maven config (like package.json)
+│   ├── src/main/java/com/cloudstore/
+│   │   ├── CloudStoreApplication.java    ← Main entry point (starts server)
+│   │   ├── config/
+│   │   │   └── WebConfig.java            ← CORS settings
+│   │   ├── controller/
+│   │   │   ├── AuthController.java       ← Login/Register API endpoints
+│   │   │   └── FileController.java       ← File upload/delete/list endpoints
+│   │   ├── dto/
+│   │   │   └── LoginRequest.java         ← Simple data class for login
+│   │   ├── model/
+│   │   │   ├── User.java                 ← User database table definition
+│   │   │   └── FileMetadata.java         ← File info table definition
+│   │   ├── repository/
+│   │   │   ├── UserRepository.java       ← Database queries for users
+│   │   │   └── FileMetadataRepository.java ← Database queries for files
+│   │   └── service/
+│   │       ├── UserService.java          ← Business logic for users
+│   │       └── FileService.java          ← Business logic for files
+│   ├── src/main/resources/
+│   │   └── application.properties        ← Server settings (port, DB, etc.)
+│   └── uploads/                          ← Where actual files are saved
+│
+└── react/                                ← REACT (JavaScript Frontend)
+    ├── index.html                        ← Main HTML file
+    ├── package.json                      ← NPM dependencies
+    ├── src/
+    │   ├── main.jsx                      ← Entry point (renders App)
+    │   ├── App.jsx                       ← Router setup (which page to show)
+    │   ├── index.css                     ← Global styles & design tokens
+    │   ├── api/
+    │   │   └── axios.js                  ← Axios config (backend URL)
+    │   ├── context/
+    │   │   └── AuthContext.jsx           ← Manages login state globally
+    │   ├── components/
+    │   │   ├── Sidebar.jsx               ← Navigation sidebar
+    │   │   ├── Sidebar.css
+    │   │   └── ProtectedRoute.jsx        ← Blocks pages if not logged in
+    │   └── pages/
+    │       ├── Login.jsx / Login.css      ← Login page
+    │       ├── Register.jsx               ← Register page
+    │       ├── Dashboard.jsx / Dashboard.css ← Main dashboard
+    │       ├── FileInfo.jsx / FileInfo.css   ← Files by type
+    │       └── Analytics.jsx / Analytics.css ← Charts page
+
+================================================================================
+4. HOW TO RUN THE PROJECT
+================================================================================
+
+You need TWO terminals running at the same time:
+
+TERMINAL 1 - Start Backend:
+  cd C:\Users\sheks\OneDrive\Desktop\Cloud-Storage-Management\backend
+  C:\Users\sheks\tools\apache-maven-3.9.15\bin\mvn spring-boot:run
+  → Starts on http://localhost:8080
+  → Keep this terminal open! Don't close it.
+
+TERMINAL 2 - Start Frontend:
+  cd C:\Users\sheks\OneDrive\Desktop\Cloud-Storage-Management\react
+  npm run dev
+  → Starts on http://localhost:5173
+  → Open this URL in your browser
+
+IMPORTANT: Start backend FIRST, then frontend.
+To stop: Press Ctrl+C in each terminal.
+
+================================================================================
+5. BACKEND EXPLAINED (SPRING BOOT)
+================================================================================
+
+The backend follows a LAYERED ARCHITECTURE:
+
+  Controller  →  Service  →  Repository  →  Database
+  (API endpoints) (Business logic) (DB queries) (H2 in-memory)
+
+--- LAYER 1: MODELS (model/) ---
+These define what data looks like. JPA converts them into database tables.
+
+User.java:
+  - id (auto-generated number)
+  - username (unique, like "john123")
+  - email (unique, like "john@email.com")
+  - password (stored as plain text for simplicity)
+  
+  The @Entity annotation tells JPA: "Create a database table from this class"
+  The @Table(name = "users") annotation says: "Call the table 'users'"
+  The @Id + @GeneratedValue says: "Auto-generate the ID"
+  The @JsonProperty(WRITE_ONLY) on password means: "Accept password in 
+  requests but NEVER send it back in responses" (security!)
+
+FileMetadata.java:
+  - id (auto-generated)
+  - fileName ("photo.png")
+  - fileSize (in bytes, like 512000)
+  - fileType (MIME type like "image/png")
+  - uploadDate (when it was uploaded)
+  - userId (which user owns this file)
+  - storedFileName (unique name used on disk to avoid conflicts)
+
+--- LAYER 2: REPOSITORIES (repository/) ---
+These handle database operations. You just define method names and Spring
+automatically creates the SQL queries!
+
+UserRepository.java:
+  - findByUsername(String username) → SELECT * FROM users WHERE username = ?
+  - findByEmail(String email)       → SELECT * FROM users WHERE email = ?
+
+FileMetadataRepository.java:
+  - findByUserId(Long userId)       → SELECT * FROM files WHERE user_id = ?
+
+You don't write ANY SQL. Spring Data JPA figures it out from the method name!
+
+--- LAYER 3: SERVICES (service/) ---
+These contain the business logic (the "rules" of your app).
+
+UserService.java:
+  - register(user): Check if username/email exists → if not, save to DB
+  - login(username, password): Find user → check password matches
+  - getUserById(id): Find user by their ID
+
+FileService.java:
+  - uploadFile(file, userId): Save file to disk → save metadata to DB
+  - getFilesByUserId(userId): Get all files for a user
+  - deleteFile(fileId, userId): Check ownership → delete from disk → delete from DB
+  - getStats(userId): Calculate file counts, storage per type, upload trends
+
+--- LAYER 4: CONTROLLERS (controller/) ---
+These are the API endpoints. They receive HTTP requests and return responses.
+
+AuthController.java handles:
+  POST /api/auth/register  → Creates a new user account
+  POST /api/auth/login     → Logs in and creates a session
+  GET  /api/auth/me        → Returns current logged-in user
+  POST /api/auth/logout    → Destroys the session
+
+FileController.java handles:
+  GET    /api/files         → Returns all files for the logged-in user
+  POST   /api/files/upload  → Accepts a file upload
+  DELETE /api/files/{id}    → Deletes a file by ID
+  GET    /api/files/stats   → Returns statistics for charts
+
+--- CONFIG (config/) ---
+
+WebConfig.java:
+  CORS (Cross-Origin Resource Sharing) configuration.
+  Without this, the browser BLOCKS requests from localhost:5173 (React)
+  to localhost:8080 (Spring Boot) because they're different "origins".
+  This config says: "Allow requests from React's URL"
+
+application.properties:
+  - server.port=8080              → Backend runs on port 8080
+  - spring.datasource.url=...    → H2 in-memory database connection
+  - spring.jpa.hibernate.ddl-auto=update → Auto-create tables
+  - spring.servlet.multipart.max-file-size=10MB → Max upload size
+
+================================================================================
+6. FRONTEND EXPLAINED (REACT)
+================================================================================
+
+--- ENTRY POINT ---
+
+index.html → loads main.jsx → renders <App /> component
+
+main.jsx:
+  The very first file that runs. It mounts the React app into the
+  <div id="root"> element in index.html.
+
+App.jsx:
+  Sets up the ROUTER (which URL shows which page):
+  - /login     → Login page
+  - /register  → Register page
+  - /dashboard → Dashboard (protected - must be logged in)
+  - /files     → File Info page (protected)
+  - /analytics → Analytics page (protected)
+  
+  Wraps everything in <AuthProvider> so all pages can access login state.
+
+--- CONTEXT (context/) ---
+
+AuthContext.jsx:
+  This is like a "global store" for authentication.
+  
+  It provides:
+  - user        → The currently logged-in user (or null)
+  - loading     → True while checking if session is still valid
+  - login()     → Function to log in
+  - register()  → Function to register
+  - logout()    → Function to log out
+  
+  Any component can use: const { user, login, logout } = useAuth();
+  
+  On app load, it calls GET /api/auth/me to check if the user's
+  session is still valid (so you stay logged in on page refresh).
+
+--- COMPONENTS (components/) ---
+
+Sidebar.jsx:
+  The dark navigation panel on the left side.
+  Shows: CloudStore logo, Dashboard/FileInfo/Analytics links,
+  user info (avatar + name + email), and Logout button.
+  Uses NavLink from React Router to highlight the active page.
+
+ProtectedRoute.jsx:
+  A wrapper component that checks if the user is logged in.
+  If NOT logged in → redirects to /login
+  If logged in → shows the page normally
+  Used like: <ProtectedRoute><Dashboard /></ProtectedRoute>
+
+--- PAGES (pages/) ---
+
+Login.jsx:
+  - Form with username + password fields
+  - On submit: calls login() from AuthContext
+  - On success: navigates to /dashboard
+  - On error: shows error message
+  - Link to Register page at the bottom
+
+Register.jsx:
+  - Form with username + email + password fields
+  - On submit: calls register() from AuthContext
+  - On success: navigates to /login (user can now sign in)
+  - Basic validation (empty fields, password length)
+
+Dashboard.jsx:
+  - Stats cards: Total Files, Storage Used, Storage Free
+  - Storage usage bar: shows X MB / 2 GB with a progress bar
+  - Upload zone: click or drag-and-drop to upload files
+  - File list: shows each file with icon, name, size, date, delete button
+  - Uses FormData to send files to the backend
+
+FileInfo.jsx:
+  - Search bar to filter files by name
+  - Category tabs: All, Images, PDFs, Documents, Others
+  - File cards showing: icon, name, size, type, upload date, category badge
+  - getCategory() function determines type from MIME type:
+      image/*          → Images
+      application/pdf  → PDFs
+      text/*, *word*   → Documents
+      everything else  → Others
+
+Analytics.jsx:
+  - Uses Recharts library for charts
+  - Pie Chart: shows count of files per type (donut style)
+  - Bar Chart: shows storage used per file type
+  - Area Chart: shows upload trend over time (files per day)
+  - Data comes from GET /api/files/stats endpoint
+  - Shows "No data yet" when no files are uploaded
+
+--- API (api/) ---
+
+axios.js:
+  Creates a pre-configured Axios instance:
+  - baseURL: http://localhost:8080/api (backend address)
+  - withCredentials: true (sends session cookie with every request)
+  
+  All pages import this and use: api.get('/files'), api.post('/auth/login'), etc.
+
+--- STYLES ---
+
+index.css:
+  Global design system with CSS variables:
+  --primary: #6C63FF (purple)
+  --bg-sidebar: #1a1a2e (dark navy)
+  --bg-main: #f0f2f5 (light gray background)
+  Font: Inter from Google Fonts
+  Also includes CSS reset and scrollbar styling.
+
+Each page has its own .css file for page-specific styles.
+
+================================================================================
+7. HOW FRONTEND & BACKEND TALK (API INTEGRATION)
+================================================================================
+
+React (browser) sends HTTP requests to Spring Boot using Axios.
+
+EXAMPLE - Loading files on Dashboard:
+
+  1. User opens Dashboard page
+  2. React runs: useEffect(() => { fetchFiles(); }, []);
+  3. fetchFiles calls: api.get('/files')
+  4. Axios sends: GET http://localhost:8080/api/files
+     with cookie: JSESSIONID=ABC123
+  5. Spring Boot receives the request
+  6. FileController.getAllFiles() runs
+  7. It reads userId from session → calls fileService.getFilesByUserId(1)
+  8. Service calls repository → repository runs SQL query
+  9. Database returns file records
+  10. Controller sends JSON response: [{id:1, fileName:"photo.png", ...}]
+  11. Axios receives the response in React
+  12. React updates state: setFiles(response.data)
+  13. React re-renders and shows the files on screen
+
+EXAMPLE - Uploading a file:
+
+  1. User clicks upload zone or drags a file
+  2. React creates a FormData object and appends the file
+  3. Axios sends: POST http://localhost:8080/api/files/upload
+     with the file as multipart/form-data
+  4. Spring Boot receives the MultipartFile
+  5. FileService saves it to ./uploads/ folder with a unique name
+  6. FileService saves metadata to the database
+  7. Controller returns the saved file info as JSON
+  8. React calls fetchFiles() again to refresh the list
+
+================================================================================
+8. SESSION & AUTHENTICATION FLOW
+================================================================================
+
+We use SESSION-BASED authentication (not JWT).
+
+HOW IT WORKS:
+
+  Step 1: User logs in
+    → React sends POST /api/auth/login { username, password }
+    → Backend verifies credentials
+    → Backend runs: session.setAttribute("userId", user.getId())
+    → Spring Boot creates a session ID: "ABC123XYZ"
+    → Stores in server memory: { "ABC123XYZ" → { userId: 1 } }
+    → Sends back a cookie header: Set-Cookie: JSESSIONID=ABC123XYZ
+
+  Step 2: Browser saves the cookie automatically
+
+  Step 3: Every future request includes the cookie
+    → React (Axios with withCredentials:true) automatically sends:
+      Cookie: JSESSIONID=ABC123XYZ
+    → Backend reads the cookie → looks up session → finds userId: 1
+    → Now it knows which user is making the request!
+
+  Step 4: Logout
+    → React sends POST /api/auth/logout
+    → Backend runs: session.invalidate()
+    → Session is destroyed, cookie becomes invalid
+
+  Step 5: Page refresh
+    → React calls GET /api/auth/me on app load
+    → If session is still valid → user stays logged in
+    → If session expired → redirects to login page
+
+ANALOGY:
+  Login    = Getting a wristband at a concert
+  Cookie   = The wristband (JSESSIONID=ABC123)
+  Request  = Showing your wristband at each stage
+  Logout   = Cutting the wristband off
+
+================================================================================
+9. DATABASE EXPLAINED
+================================================================================
+
+We use H2 IN-MEMORY DATABASE.
+
+What is H2?
+  - A lightweight Java database
+  - "In-memory" means it runs in RAM (computer's memory)
+  - No installation needed!
+  - Data is LOST when you stop the server
+
+How tables are created:
+  - You write Java classes with @Entity annotation (User.java, FileMetadata.java)
+  - Spring Boot + Hibernate AUTOMATICALLY create database tables from them
+  - spring.jpa.hibernate.ddl-auto=update does this magic
+
+Database Tables:
+
+  TABLE: users
+  +----+----------+------------------+----------+
+  | id | username | email            | password |
+  +----+----------+------------------+----------+
+  | 1  | john     | john@email.com   | pass123  |
+  | 2  | alice    | alice@email.com  | mypass   |
+  +----+----------+------------------+----------+
+
+  TABLE: files
+  +----+-----------+----------+------------+---------------------+---------+-------------------+
+  | id | file_name | file_size| file_type  | upload_date         | user_id | stored_file_name  |
+  +----+-----------+----------+------------+---------------------+---------+-------------------+
+  | 1  | photo.png | 512000   | image/png  | 2026-04-21 23:30:00 | 1       | 1713734200_photo.png |
+  | 2  | doc.pdf   | 1048576  | application/pdf | 2026-04-21 23:31:00 | 1  | 1713734260_doc.pdf   |
+  +----+-----------+----------+------------+---------------------+---------+-------------------+
+
+You can view the database at: http://localhost:8080/h2-console
+  JDBC URL: jdbc:h2:mem:cloudstore
+  Username: sa
+  Password: (leave empty)
+
+================================================================================
+10. FILE UPLOAD FLOW (DETAILED)
+================================================================================
+
+When a user uploads "photo.png" (500 KB), here's EXACTLY what happens:
+
+FRONTEND:
+  1. User clicks the upload zone → file input opens
+  2. User selects "photo.png"
+  3. onFileSelect() is called with the file
+  4. Creates FormData: formData.append('file', selectedFile)
+  5. Sends: api.post('/files/upload', formData, {
+       headers: { 'Content-Type': 'multipart/form-data' }
+     })
+
+BACKEND:
+  6. FileController receives @RequestParam("file") MultipartFile file
+  7. Checks if user is logged in (reads session)
+  8. Calls fileService.uploadFile(file, userId)
+  
+  FileService.uploadFile():
+  9. Creates unique name: "1713734200123_photo.png" (timestamp + original name)
+  10. Copies file bytes to: ./uploads/1713734200123_photo.png
+  11. Creates FileMetadata object:
+      - fileName = "photo.png"
+      - fileSize = 512000 (bytes)
+      - fileType = "image/png"
+      - uploadDate = now
+      - userId = 1
+      - storedFileName = "1713734200123_photo.png"
+  12. Saves metadata to database: fileRepository.save(metadata)
+  13. Returns the saved metadata as JSON
+
+FRONTEND (continued):
+  14. Axios receives success response
+  15. Calls fetchFiles() to reload the file list
+  16. Dashboard re-renders showing the new file
+  17. Stats cards update (Total Files: 1, Storage: 500 KB)
+
+================================================================================
+11. EACH FILE EXPLAINED (QUICK REFERENCE)
+================================================================================
+
+BACKEND FILES:
+
+  pom.xml
+    → Like package.json for Java. Lists all dependencies (Spring Web, JPA, H2)
+
+  CloudStoreApplication.java
+    → The main() method. Starts the entire Spring Boot server.
+    → @SpringBootApplication enables auto-configuration.
+
+  WebConfig.java
+    → Allows React (port 5173) to call the backend (port 8080).
+    → Without CORS config, browsers block cross-origin requests.
+
+  User.java
+    → Defines the User table structure. Has id, username, email, password.
+
+  FileMetadata.java
+    → Defines the Files table. Has id, fileName, fileSize, fileType, etc.
+
+  LoginRequest.java
+    → Simple DTO (Data Transfer Object) with username and password fields.
+    → Used to receive login form data in the controller.
+
+  UserRepository.java
+    → Interface that extends JpaRepository.
+    → Provides findByUsername() and findByEmail() methods.
+    → Spring auto-implements all the SQL behind the scenes.
+
+  FileMetadataRepository.java
+    → Provides findByUserId() to get files for a specific user.
+
+  UserService.java
+    → register(): validates uniqueness, saves user to DB
+    → login(): finds user, checks password
+    → getUserById(): finds user by ID
+
+  FileService.java
+    → uploadFile(): saves file to disk + metadata to DB
+    → getFilesByUserId(): gets all user's files
+    → deleteFile(): removes from disk + DB
+    → getStats(): calculates analytics data
+
+  AuthController.java
+    → /register: creates account
+    → /login: creates session
+    → /me: returns current user
+    → /logout: destroys session
+
+  FileController.java
+    → GET /files: list files
+    → POST /files/upload: upload file
+    → DELETE /files/{id}: delete file
+    → GET /files/stats: analytics data
+
+  application.properties
+    → All server configuration in one file.
+
+FRONTEND FILES:
+
+  index.html → The single HTML page (React is a "Single Page App")
+  main.jsx → Mounts React into <div id="root">
+  App.jsx → Defines routes (URL → Page mapping)
+  index.css → Global styles, colors, fonts, CSS variables
+  axios.js → Configured Axios instance for API calls
+  AuthContext.jsx → Global auth state (user, login, logout functions)
+  ProtectedRoute.jsx → Redirects to /login if not authenticated
+  Sidebar.jsx → Navigation menu on the left
+  Login.jsx → Login form page
+  Register.jsx → Registration form page
+  Dashboard.jsx → Main page with stats, upload, file list
+  FileInfo.jsx → Files grouped by type with search/filter
+  Analytics.jsx → Pie chart, bar chart, area chart
+
+================================================================================
+12. REST API REFERENCE
+================================================================================
+
+Base URL: http://localhost:8080/api
+
+--- AUTHENTICATION ---
+
+POST /auth/register
+  Body: { "username": "john", "email": "john@email.com", "password": "pass123" }
+  Response: { "id": 1, "username": "john", "email": "john@email.com" }
+  Errors: "Username already exists", "Email already exists"
+
+POST /auth/login
+  Body: { "username": "john", "password": "pass123" }
+  Response: { "id": 1, "username": "john", "email": "john@email.com" }
+  Side effect: Creates a session (sets JSESSIONID cookie)
+  Errors: "User not found", "Invalid password"
+
+GET /auth/me
+  Response: { "id": 1, "username": "john", "email": "john@email.com" }
+  Errors: 401 "Not logged in"
+
+POST /auth/logout
+  Response: { "message": "Logged out successfully" }
+  Side effect: Destroys the session
+
+--- FILES ---
+
+GET /files
+  Response: [
+    { "id": 1, "fileName": "photo.png", "fileSize": 512000,
+      "fileType": "image/png", "uploadDate": "2026-04-21T23:30:00",
+      "userId": 1, "storedFileName": "1713734200_photo.png" }
+  ]
+
+POST /files/upload
+  Content-Type: multipart/form-data
+  Body: file = (binary file data)
+  Response: { "id": 1, "fileName": "photo.png", ... }
+
+DELETE /files/{id}
+  Example: DELETE /files/1
+  Response: { "message": "File deleted successfully" }
+  Errors: "File not found", "You can only delete your own files"
+
+GET /files/stats
+  Response: {
+    "totalFiles": 5,
+    "totalStorage": 2867200,
+    "filesByType": { "Images": 2, "PDFs": 1, "Documents": 2 },
+    "storageByType": { "Images": 1331200, "PDFs": 1228800, "Documents": 307200 },
+    "uploadTrend": { "2026-04-21": 5 }
+  }
+
+================================================================================
+                         END OF DOCUMENTATION
+================================================================================
+
+TIP: To make Maven easier to use, add this to your system PATH:
+  C:\Users\sheks\tools\apache-maven-3.9.15\bin
+
+Then you can just type "mvn spring-boot:run" instead of the full path!
